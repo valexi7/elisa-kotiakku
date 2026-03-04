@@ -149,8 +149,3 @@ sections:
 - Energy sensors are accumulated from each API period (`period_start` -> `period_end`) and restored after restart.
 - If the API is reachable but latest measurement values are all `null`, a warning is logged that inverter connection may be lost.
 - If the API connection itself fails (timeout/network), an error is logged that API connection is lost.
-
-## Troubleshooting
-
-- Integration icon missing in HACS/Devices:
-  The integration now ships a square `brand/icon.png` (512x512). Restart Home Assistant and hard refresh browser cache (`Ctrl+F5`). HACS/brand icons can also be cached for a while.
