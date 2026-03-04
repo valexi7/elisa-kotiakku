@@ -1,91 +1,233 @@
-  - type: sections
-    max_columns: 4
-    title: Elisa Kotiakku
-    path: kotiakku
-    sections:
-      - type: grid
-        cards:
-          - type: heading
-            heading: Live Power
-            heading_style: title
-          - type: tile
+title: Elisa Kotiakku
+path: kotiakku
+icon: mdi:battery-charging-medium
+type: masonry
+cards:
+  - type: heading
+    heading: Battery & Solar
+  - square: false
+    type: grid
+    columns: 1
+    cards:
+      - type: custom:power-flow-card-plus
+        title: Live Power Flow
+        entities:
+          solar:
+            entity: sensor.solar_production
+          battery:
+            entity:
+              consumption: sensor.battery_consumption
+              production: sensor.battery_production
+            state_of_charge: sensor.battery_state_of_charge
+          grid:
+            entity:
+              consumption: sensor.grid_consumption
+              production: sensor.grid_production
+          home:
+            entity: sensor.house_power
+        clickable_entities: true
+        w_decimals: 0
+        kw_decimals: 2
+        min_flow_rate: 0.2
+        max_flow_rate: 10
+        display_zero_lines: true
+      - type: custom:mushroom-template-card
+        entity: sensor.battery_state_of_charge
+        primary: Battery
+        secondary: >
+          SoC: {{ states('sensor.battery_state_of_charge') }} % • {{
+          states('sensor.battery_temperature') }} °C • {{
+            'Charging' if (states('sensor.grid_to_battery')|float(0) + states('sensor.solar_to_battery')|float(0)) >
+                          (states('sensor.battery_to_house')|float(0) + states('sensor.battery_to_grid')|float(0))
+            else 'Discharging' if (states('sensor.battery_to_house')|float(0) + states('sensor.battery_to_grid')|float(0)) >
+                                 (states('sensor.grid_to_battery')|float(0) + states('sensor.solar_to_battery')|float(0))
+            else 'Idle'
+          }}
+        icon: >
+          {% set soc = states('sensor.battery_state_of_charge')|float(0) %} {%
+          if soc >= 95 %} mdi:battery {% elif soc >= 85 %} mdi:battery-90 {%
+          elif soc >= 75 %} mdi:battery-80 {% elif soc >= 65 %} mdi:battery-70
+          {% elif soc >= 55 %} mdi:battery-60 {% elif soc >= 45 %}
+          mdi:battery-50 {% elif soc >= 35 %} mdi:battery-40 {% elif soc >= 25
+          %} mdi:battery-30 {% elif soc >= 15 %} mdi:battery-20 {% elif soc > 5
+          %}  mdi:battery-10 {% else %} mdi:battery-alert {% endif %}
+        tap_action:
+          action: more-info
+        color: >
+          {% set ch = states('sensor.grid_to_battery')|float(0) +
+          states('sensor.solar_to_battery')|float(0) %} {% set dis =
+          states('sensor.battery_to_house')|float(0) +
+          states('sensor.battery_to_grid')|float(0) %} {% if ch > dis %} green
+          {% elif dis > ch %} orange {% else %} grey {% endif %}
+        vertical: true
+        features_position: bottom
+      - type: custom:mushroom-chips-card
+        chips:
+          - type: entity
             entity: sensor.solar_power
             name: Solar
-          - type: tile
+            icon: mdi:weather-sunny
+          - type: entity
             entity: sensor.house_power
             name: House
-          - type: tile
+            icon: mdi:home-lightning-bolt
+          - type: entity
             entity: sensor.grid_power
             name: Grid
-          - type: tile
-            entity: sensor.battery_power
-            name: Battery
-          - type: gauge
+            icon: mdi:transmission-tower
+          - type: entity
             entity: sensor.battery_state_of_charge
-            name: Battery SoC
-            min: 0
-            max: 100
-            severity:
-              green: 60
-              yellow: 25
-              red: 0
-      - type: grid
-        cards:
-          - type: heading
-            heading: Energy Flow Details
-            heading_style: title
-          - type: entities
-            title: Solar Distribution
-            show_header_toggle: false
-            entities:
-              - entity: sensor.solar_to_house
-                name: Solar to House
-              - entity: sensor.solar_to_battery
-                name: Solar to Battery
-              - entity: sensor.solar_to_grid
-                name: Solar to Grid
-          - type: entities
-            title: Grid and Battery Paths
-            show_header_toggle: false
-            entities:
-              - entity: sensor.grid_to_house
-                name: Grid to House
-              - entity: sensor.grid_to_battery
-                name: Grid to Battery
-              - entity: sensor.battery_to_house
-                name: Battery to House
-              - entity: sensor.battery_to_grid
-                name: Battery to Grid
-          - type: entities
-            title: Price and Temperature
-            show_header_toggle: false
-            entities:
-              - entity: sensor.spot_price
-                name: Spot Price
-              - entity: sensor.battery_temperature
-                name: Battery Temperature
-      - type: grid
-        cards:
-          - type: heading
-            heading: Trends (24h)
-            heading_style: title
-          - type: history-graph
-            title: Power Trend
-            hours_to_show: 24
-            entities:
-              - entity: sensor.solar_power
-                name: Solar
-              - entity: sensor.house_power
-                name: House
-              - entity: sensor.grid_power
-                name: Grid
-              - entity: sensor.battery_power
-                name: Battery
-          - type: history-graph
-            title: Price and Battery
-            hours_to_show: 24
-            entities:
-              - entity: sensor.spot_price
-                name: Spot Price
-              - entity: sensor.battery_state_of_charge
-                name: SoC
+            name: SoC
+            icon: mdi:battery
+          - type: entity
+            entity: sensor.spot_price
+            name: Spot
+            icon: mdi:currency-eur
+  - type: custom:plotly-graph
+    title: Energy Consumption
+    hours_to_show: 6
+    refresh_interval: 30
+    defaults:
+      entity:
+        period: 5minute
+    layout:
+      height: 340
+      barmode: relative
+      bargap: 0.15
+      paper_bgcolor: rgba(0,0,0,0)
+      plot_bgcolor: rgba(0,0,0,0)
+      margin:
+        l: 50
+        r: 55
+        t: 40
+        b: 45
+      xaxis:
+        showgrid: true
+        zeroline: false
+      yaxis:
+        title: kW
+        showgrid: true
+        zeroline: true
+        zerolinewidth: 2
+      yaxis2:
+        title: Spot
+        overlaying: "y"
+        side: right
+        showgrid: false
+      legend:
+        orientation: h
+        "y": -0.55
+        x: 0.15
+    entities:
+      - entity: sensor.grid_to_battery
+        name: Grid → Battery
+        type: bar
+        marker:
+          color: rgba(255,152,0,0.95)
+      - entity: sensor.solar_to_battery
+        name: Solar → Battery
+        type: bar
+        marker:
+          color: rgba(253,216,53,0.95)
+      - entity: sensor.battery_to_house
+        name: Battery → House
+        type: bar
+        filters:
+          - multiply: -1
+        marker:
+          color: rgba(76,175,80,0.95)
+      - entity: sensor.battery_to_grid
+        name: Battery → Grid
+        type: bar
+        filters:
+          - multiply: -1
+        marker:
+          color: rgba(33,150,243,0.95)
+      - entity: sensor.spot_price
+        name: Spot price
+        type: scatter
+        mode: lines
+        period: 5minute
+        yaxis: y2
+        line:
+          width: 2
+  - type: custom:plotly-graph
+    title: Solar Production
+    hours_to_show: 6
+    refresh_interval: 30
+    defaults:
+      entity:
+        period: 5minute
+    layout:
+      height: 300
+      barmode: relative
+      bargap: 0.15
+      paper_bgcolor: rgba(0,0,0,0)
+      plot_bgcolor: rgba(0,0,0,0)
+      margin:
+        l: 50
+        r: 30
+        t: 40
+        b: 45
+      xaxis:
+        showgrid: true
+      yaxis:
+        title: kW
+        showgrid: true
+        zeroline: true
+        zerolinewidth: 2
+      legend:
+        orientation: h
+        "y": -0.35
+    entities:
+      - entity: sensor.solar_to_house
+        name: Solar → House
+        type: bar
+        marker:
+          color: rgba(255,193,7,0.95)
+      - entity: sensor.solar_to_battery
+        name: Solar → Battery
+        type: bar
+        marker:
+          color: rgba(0,188,212,0.95)
+      - entity: sensor.solar_to_grid
+        name: Solar → Grid
+        type: bar
+        marker:
+          color: rgba(156,39,176,0.95)
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: custom:mushroom-entity-card
+        entity: sensor.solar_energy
+        name: Solar Energy
+        icon: mdi:solar-power
+      - type: custom:mushroom-entity-card
+        entity: sensor.house_consumption_energy
+        name: House Consumption
+        icon: mdi:home-lightning-bolt
+      - type: custom:mushroom-entity-card
+        entity: sensor.grid_import_energy
+        name: Grid Import Energy
+        icon: mdi:transmission-tower-import
+      - type: custom:mushroom-entity-card
+        entity: sensor.grid_export_energy
+        name: Grid Export Energy
+        icon: mdi:transmission-tower-export
+      - type: custom:mushroom-entity-card
+        entity: sensor.battery_charge_energy
+        name: Battery Charge Energy
+        icon: mdi:battery-arrow-up
+      - type: custom:mushroom-entity-card
+        entity: sensor.battery_discharge_energy
+        name: Battery Discharge Energy
+        icon: mdi:battery-arrow-down
+      - type: custom:mushroom-entity-card
+        entity: sensor.battery_temperature
+        name: Battery Temp
+        icon: mdi:thermometer
+      - type: custom:mushroom-entity-card
+        entity: sensor.battery_state_of_charge
+        name: Battery SoC
+        icon: mdi:battery

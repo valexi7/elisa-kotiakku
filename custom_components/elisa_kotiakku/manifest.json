@@ -1,7 +1,7 @@
 {
   "domain": "elisa_kotiakku",
   "name": "Elisa Kotiakku",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "documentation": "https://residential.gridle.com/api/public/docs",
   "iot_class": "cloud_polling",
   "config_flow": true,

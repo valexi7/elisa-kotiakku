@@ -76,6 +76,17 @@ It also creates cumulative energy sensors (Energy Dashboard compatible):
 
 These use `kWh`, `device_class: energy`, and `state_class: total_increasing`.
 
+It also creates live derived power sensors:
+
+- `sensor.grid_consumption`
+- `sensor.grid_production`
+- `sensor.battery_consumption`
+- `sensor.battery_production`
+
+Diagnostic sensors:
+
+- `sensor.sensor_data_available` (`True`/`False`)
+
 ## Dashboard YAML Example
 
 This repository includes a ready example view:
@@ -84,12 +95,20 @@ This repository includes a ready example view:
 
 <img src="media/example_dashboard.png" alt="Example dashboard preview" width="520" />
 
+The example matches the picture and uses these custom cards:
+
+- `power-flow-card-plus`
+- `mushroom` cards
+- `plotly-graph`
+
 Quick use:
 
 1. Open your dashboard in edit mode.
 2. Add a new view and switch to YAML mode.
 3. Paste the content from `examples/dashboard_elisa_kotiakku.yaml`.
 4. Adjust entity IDs if your names differ.
+
+If you do not use those custom cards, replace them with standard HA cards.
 
 Default entity IDs from this integration are name-based, for example:
 
@@ -128,3 +147,10 @@ sections:
 - API data is polled every 30 seconds.
 - If the latest row has `null` values for a field, that sensor becomes temporarily unavailable.
 - Energy sensors are accumulated from each API period (`period_start` -> `period_end`) and restored after restart.
+- If the API is reachable but latest measurement values are all `null`, a warning is logged that inverter connection may be lost.
+- If the API connection itself fails (timeout/network), an error is logged that API connection is lost.
+
+## Troubleshooting
+
+- Integration icon missing in HACS/Devices:
+  The integration now ships a square `brand/icon.png` (512x512). Restart Home Assistant and hard refresh browser cache (`Ctrl+F5`). HACS/brand icons can also be cached for a while.

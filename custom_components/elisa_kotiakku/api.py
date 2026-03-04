@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from asyncio import TimeoutError
 from typing import Any
 
 from aiohttp import ClientError, ClientSession
@@ -18,6 +19,10 @@ class ElisaKotiakkuApiError(HomeAssistantError):
 
 class ElisaKotiakkuApiAuthError(ElisaKotiakkuApiError):
     """Authentication or authorization error."""
+
+
+class ElisaKotiakkuApiConnectionError(ElisaKotiakkuApiError):
+    """Network/connection error when reaching the API."""
 
 
 class ElisaKotiakkuApiClient:
@@ -46,8 +51,10 @@ class ElisaKotiakkuApiClient:
 
         try:
             response = await self._session.get(url, params=params, headers=headers, timeout=20)
-        except ClientError as err:
-            raise ElisaKotiakkuApiError(f"Unable to connect to Elisa Kotiakku API: {err}") from err
+        except (ClientError, TimeoutError) as err:
+            raise ElisaKotiakkuApiConnectionError(
+                f"Unable to connect to Elisa Kotiakku API: {err}"
+            ) from err
 
         async with response:
             if response.status in (401, 403):

@@ -13,7 +13,13 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfPower, UnitOfTemperature
+from homeassistant.const import (
+    PERCENTAGE,
+    EntityCategory,
+    UnitOfEnergy,
+    UnitOfPower,
+    UnitOfTemperature,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -21,7 +27,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
-from .coordinator import ElisaKotiakkuDataCoordinator
+from .coordinator import EXPECTED_MEASUREMENT_KEYS, ElisaKotiakkuDataCoordinator
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -36,6 +42,20 @@ class ElisaKotiakkuEnergySensorEntityDescription(SensorEntityDescription):
     """Describes Elisa Kotiakku cumulative energy sensor entity."""
 
     value_fn: Callable[[dict[str, Any]], float]
+
+
+@dataclass(frozen=True, kw_only=True)
+class ElisaKotiakkuDerivedPowerSensorEntityDescription(SensorEntityDescription):
+    """Describes Elisa Kotiakku derived live power sensor entity."""
+
+    value_fn: Callable[[dict[str, Any]], float | None]
+
+
+@dataclass(frozen=True, kw_only=True)
+class ElisaKotiakkuDiagnosticSensorEntityDescription(SensorEntityDescription):
+    """Describes Elisa Kotiakku diagnostic sensor entity."""
+
+    value_fn: Callable[[ElisaKotiakkuDataCoordinator], Any]
 
 
 SENSOR_DESCRIPTIONS: tuple[ElisaKotiakkuSensorEntityDescription, ...] = (
@@ -200,6 +220,27 @@ def _flow_or_fallback(
     return max(fallback, 0.0)
 
 
+def _sum_required(row: dict[str, Any], keys: tuple[str, ...]) -> float | None:
+    """Sum keys only when all required values are present."""
+    values: list[float] = []
+    for key in keys:
+        value = row.get(key)
+        if value is None:
+            return None
+        values.append(_as_float(value))
+    return sum(values)
+
+
+def _has_measurement_data(row: dict[str, Any]) -> bool:
+    """Return True when latest row contains any non-null measurement value."""
+    if not row:
+        return False
+    present = [key for key in EXPECTED_MEASUREMENT_KEYS if key in row]
+    if not present:
+        return False
+    return any(row.get(key) is not None for key in present)
+
+
 ENERGY_SENSOR_DESCRIPTIONS: tuple[ElisaKotiakkuEnergySensorEntityDescription, ...] = (
     ElisaKotiakkuEnergySensorEntityDescription(
         key="solar_energy_total",
@@ -274,6 +315,61 @@ ENERGY_SENSOR_DESCRIPTIONS: tuple[ElisaKotiakkuEnergySensorEntityDescription, ..
 )
 
 
+DERIVED_POWER_SENSOR_DESCRIPTIONS: tuple[
+    ElisaKotiakkuDerivedPowerSensorEntityDescription, ...
+] = (
+    ElisaKotiakkuDerivedPowerSensorEntityDescription(
+        key="grid_consumption_kw",
+        name="Grid Consumption",
+        native_unit_of_measurement=UnitOfPower.KILO_WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:transmission-tower-import",
+        value_fn=lambda row: _sum_required(row, ("grid_to_house_kw", "grid_to_battery_kw")),
+    ),
+    ElisaKotiakkuDerivedPowerSensorEntityDescription(
+        key="grid_production_kw",
+        name="Grid Production",
+        native_unit_of_measurement=UnitOfPower.KILO_WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:transmission-tower-export",
+        value_fn=lambda row: _sum_required(row, ("solar_to_grid_kw", "battery_to_grid_kw")),
+    ),
+    ElisaKotiakkuDerivedPowerSensorEntityDescription(
+        key="battery_consumption_kw",
+        name="Battery Consumption",
+        native_unit_of_measurement=UnitOfPower.KILO_WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:battery-arrow-up",
+        value_fn=lambda row: _sum_required(row, ("grid_to_battery_kw", "solar_to_battery_kw")),
+    ),
+    ElisaKotiakkuDerivedPowerSensorEntityDescription(
+        key="battery_production_kw",
+        name="Battery Production",
+        native_unit_of_measurement=UnitOfPower.KILO_WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:battery-arrow-down",
+        value_fn=lambda row: _sum_required(row, ("battery_to_grid_kw", "battery_to_house_kw")),
+    ),
+)
+
+
+DIAGNOSTIC_SENSOR_DESCRIPTIONS: tuple[
+    ElisaKotiakkuDiagnosticSensorEntityDescription, ...
+] = (
+    ElisaKotiakkuDiagnosticSensorEntityDescription(
+        key="sensor_data_available",
+        name="Sensor Data Available",
+        icon="mdi:database-check-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda coordinator: _has_measurement_data(coordinator.latest_row),
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -288,6 +384,14 @@ async def async_setup_entry(
     entities.extend(
         ElisaKotiakkuEnergySensor(coordinator, entry.entry_id, description)
         for description in ENERGY_SENSOR_DESCRIPTIONS
+    )
+    entities.extend(
+        ElisaKotiakkuDerivedPowerSensor(coordinator, entry.entry_id, description)
+        for description in DERIVED_POWER_SENSOR_DESCRIPTIONS
+    )
+    entities.extend(
+        ElisaKotiakkuDiagnosticSensor(coordinator, entry.entry_id, description)
+        for description in DIAGNOSTIC_SENSOR_DESCRIPTIONS
     )
     async_add_entities(entities)
 
@@ -416,3 +520,59 @@ class ElisaKotiakkuEnergySensor(
         if not isinstance(value, str):
             return None
         return dt_util.parse_datetime(value)
+
+
+class ElisaKotiakkuDerivedPowerSensor(
+    CoordinatorEntity[ElisaKotiakkuDataCoordinator], SensorEntity
+):
+    """Live derived power sensor based on existing flow sensors."""
+
+    entity_description: ElisaKotiakkuDerivedPowerSensorEntityDescription
+
+    def __init__(
+        self,
+        coordinator: ElisaKotiakkuDataCoordinator,
+        entry_id: str,
+        description: ElisaKotiakkuDerivedPowerSensorEntityDescription,
+    ) -> None:
+        """Initialize derived power sensor."""
+        super().__init__(coordinator)
+        self.entity_description = description
+        self._attr_unique_id = f"{entry_id}_{description.key}"
+        self._attr_has_entity_name = True
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the derived live value."""
+        latest = self.coordinator.latest_row
+        if not latest:
+            return None
+        value = self.entity_description.value_fn(latest)
+        if value is None:
+            return None
+        return round(value, 6)
+
+
+class ElisaKotiakkuDiagnosticSensor(
+    CoordinatorEntity[ElisaKotiakkuDataCoordinator], SensorEntity
+):
+    """Diagnostic sensor values for API/data state."""
+
+    entity_description: ElisaKotiakkuDiagnosticSensorEntityDescription
+
+    def __init__(
+        self,
+        coordinator: ElisaKotiakkuDataCoordinator,
+        entry_id: str,
+        description: ElisaKotiakkuDiagnosticSensorEntityDescription,
+    ) -> None:
+        """Initialize diagnostic sensor."""
+        super().__init__(coordinator)
+        self.entity_description = description
+        self._attr_unique_id = f"{entry_id}_{description.key}"
+        self._attr_has_entity_name = True
+
+    @property
+    def native_value(self) -> Any:
+        """Return diagnostic value."""
+        return self.entity_description.value_fn(self.coordinator)

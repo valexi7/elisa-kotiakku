@@ -1,0 +1,7 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "Add-Type": true,
+        "New-Object": true,
+        "Move-Item": true
+    }
+}
