@@ -5,7 +5,7 @@
 [![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/valexi)
 
 Custom integration for Home Assistant that reads your Elisa Kotiakku data from:
-
+<img src="media/example_dashboard.png" alt="Example dashboard preview" width="860" />
 - `https://residential.gridle.com/api/public/measurements`
 - Authentication header: `x-api-key: <your_api_key>`
 
