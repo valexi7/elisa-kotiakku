@@ -1,6 +1,7 @@
 # Elisa Kotiakku Home Assistant Custom Component
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![Add to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=valexi7&repository=elisa-kotiakku&category=integration)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate/?business=DS47TSR4VGKFL&no_recurring=0&item_name=Tech+is+a+playground+for+solving+real-world+problems+and+building+tools+that+make+life+easier+for+others.&currency_code=EUR)
 [![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/valexi)
 
