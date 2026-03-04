@@ -21,7 +21,7 @@ Custom integration for Home Assistant that reads your Elisa Kotiakku data from:
 
 ### Install with HACS
 
-![HACS Custom Repository](media/HACS_custom_repository.png)
+<img src="media/HACS_custom_repository.png" alt="HACS Custom Repository" width="360" />
 
 1. Open HACS in Home Assistant.
 2. Go to `Integrations`.
@@ -33,7 +33,7 @@ Custom integration for Home Assistant that reads your Elisa Kotiakku data from:
 8. Search for `Elisa Kotiakku` and open it.
 9. Enter your API key.
 
-![Elisa Kotiakku Integration Setup](media/Screenshot_Kotiakku.jpg)
+<img src="media/Screenshot_Kotiakku.jpg" alt="Elisa Kotiakku Integration Setup" width="360" />
 
 ### HACS Requirements
 
@@ -75,7 +75,7 @@ This repository includes a ready example view:
 
 - `examples/dashboard_elisa_kotiakku.yaml`
 
-<img src="media/example_dashboard.png" alt="Example dashboard preview" width="420" />
+<img src="media/example_dashboard.png" alt="Example dashboard preview" width="520" />
 
 Quick use:
 
