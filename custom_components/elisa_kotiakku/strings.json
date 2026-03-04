@@ -1,0 +1,19 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Elisa Kotiakku",
+        "description": "Enter your Kotiakku API key from Settings -> Data -> API.",
+        "data": {
+          "api_key": "API Key"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid API key or API not reachable"
+    },
+    "abort": {
+      "already_configured": "Integration is already configured"
+    }
+  }
+}

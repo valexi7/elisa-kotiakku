@@ -1,0 +1,13 @@
+{
+  "name": "Elisa Kotiakku",
+  "content_in_root": false,
+  "domains": [
+    "elisa_kotiakku"
+  ],
+  "country": [
+    "FI"
+  ],
+  "homeassistant": "2024.1.0",
+  "iot_class": "cloud_polling",
+  "render_readme": true
+}
