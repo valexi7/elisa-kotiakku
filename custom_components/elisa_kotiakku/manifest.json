@@ -7,6 +7,6 @@
   "config_flow": true,
   "requirements": [],
   "codeowners": [
-    "@valtt"
+    "@valexi7"
   ]
 }
