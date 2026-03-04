@@ -13,12 +13,13 @@ cards:
         title: Live Power Flow
         entities:
           solar:
-            entity: sensor.solar_production
+            entity: sensor.solar_power
           battery:
             entity:
-              consumption: sensor.battery_consumption
-              production: sensor.battery_production
+              consumption: sensor.battery_production
+              production: sensor.battery_consumption
             state_of_charge: sensor.battery_state_of_charge
+            invert_state: false
           grid:
             entity:
               consumption: sensor.grid_consumption

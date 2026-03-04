@@ -220,14 +220,17 @@ def _flow_or_fallback(
     return max(fallback, 0.0)
 
 
-def _sum_required(row: dict[str, Any], keys: tuple[str, ...]) -> float | None:
-    """Sum keys only when all required values are present."""
+def _sum_available(row: dict[str, Any], keys: tuple[str, ...]) -> float | None:
+    """Sum available keys; return None only if all source values are null/missing."""
     values: list[float] = []
     for key in keys:
         value = row.get(key)
-        if value is None:
-            return None
-        values.append(_as_float(value))
+        if value is not None:
+            values.append(_as_float(value))
+
+    if not values:
+        return None
+
     return sum(values)
 
 
@@ -325,7 +328,7 @@ DERIVED_POWER_SENSOR_DESCRIPTIONS: tuple[
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:transmission-tower-import",
-        value_fn=lambda row: _sum_required(row, ("grid_to_house_kw", "grid_to_battery_kw")),
+        value_fn=lambda row: _sum_available(row, ("grid_to_house_kw", "grid_to_battery_kw")),
     ),
     ElisaKotiakkuDerivedPowerSensorEntityDescription(
         key="grid_production_kw",
@@ -334,7 +337,7 @@ DERIVED_POWER_SENSOR_DESCRIPTIONS: tuple[
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:transmission-tower-export",
-        value_fn=lambda row: _sum_required(row, ("solar_to_grid_kw", "battery_to_grid_kw")),
+        value_fn=lambda row: _sum_available(row, ("solar_to_grid_kw", "battery_to_grid_kw")),
     ),
     ElisaKotiakkuDerivedPowerSensorEntityDescription(
         key="battery_consumption_kw",
@@ -343,7 +346,7 @@ DERIVED_POWER_SENSOR_DESCRIPTIONS: tuple[
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:battery-arrow-up",
-        value_fn=lambda row: _sum_required(row, ("grid_to_battery_kw", "solar_to_battery_kw")),
+        value_fn=lambda row: _sum_available(row, ("grid_to_battery_kw", "solar_to_battery_kw")),
     ),
     ElisaKotiakkuDerivedPowerSensorEntityDescription(
         key="battery_production_kw",
@@ -352,7 +355,7 @@ DERIVED_POWER_SENSOR_DESCRIPTIONS: tuple[
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:battery-arrow-down",
-        value_fn=lambda row: _sum_required(row, ("battery_to_grid_kw", "battery_to_house_kw")),
+        value_fn=lambda row: _sum_available(row, ("battery_to_grid_kw", "battery_to_house_kw")),
     ),
 )
 

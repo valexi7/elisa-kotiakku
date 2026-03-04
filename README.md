@@ -84,6 +84,15 @@ It also creates live derived power sensors:
 - `sensor.battery_consumption`
 - `sensor.battery_production`
 
+Derived power formulas (`kW`):
+
+- `grid_consumption = grid_to_house + grid_to_battery`
+- `grid_production = solar_to_grid + battery_to_grid`
+- `battery_consumption = grid_to_battery + solar_to_battery`
+- `battery_production = battery_to_grid + battery_to_house`
+
+If one source value is `null`, calculation still works with the available value. The derived sensor is unavailable only when both source values are `null`.
+
 Diagnostic sensors:
 
 - `sensor.sensor_data_available` (`True`/`False`)
@@ -101,6 +110,13 @@ The example matches the picture and uses these custom cards:
 - `power-flow-card-plus`
 - `mushroom` cards
 - `plotly-graph`
+
+Note for `power-flow-card-plus` battery arrows:
+
+- Use `consumption: sensor.battery_production`
+- Use `production: sensor.battery_consumption`
+
+This is a card mapping convention for correct flow direction in that card. Integration sensor formulas remain unchanged.
 
 Quick use:
 
