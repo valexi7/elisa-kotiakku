@@ -65,11 +65,18 @@ The integration creates sensors for:
 - `spot_price_cents_per_kwh` (`c/kWh`)
 - `battery_temperature_celsius` (`°C`)
 
+It also creates cumulative energy sensors (Energy Dashboard compatible):
+
+- `sensor.solar_energy`
+- `sensor.house_consumption_energy`
+- `sensor.grid_import_energy`
+- `sensor.grid_export_energy`
+- `sensor.battery_charge_energy`
+- `sensor.battery_discharge_energy`
+
+These use `kWh`, `device_class: energy`, and `state_class: total_increasing`.
+
 ## Dashboard YAML Example
-
-Inspired by the Home Assistant community solar dashboard style:
-
-- https://community.home-assistant.io/t/monitor-your-solar-pv-system-in-home-assistant/342710
 
 This repository includes a ready example view:
 
@@ -120,3 +127,4 @@ sections:
 
 - API data is polled every 30 seconds.
 - If the latest row has `null` values for a field, that sensor becomes temporarily unavailable.
+- Energy sensors are accumulated from each API period (`period_start` -> `period_end`) and restored after restart.

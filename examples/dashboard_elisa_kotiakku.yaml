@@ -39,7 +39,6 @@
             show_header_toggle: false
             entities:
               - entity: sensor.solar_to_house
-              - entity: sensor.solar_to_house
                 name: Solar to House
               - entity: sensor.solar_to_battery
                 name: Solar to Battery
