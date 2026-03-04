@@ -21,6 +21,8 @@ Custom integration for Home Assistant that reads your Elisa Kotiakku data from:
 
 ### Install with HACS
 
+![HACS Custom Repository](media/HACS_custom_repository.png)
+
 1. Open HACS in Home Assistant.
 2. Go to `Integrations`.
 3. Open the menu (three dots) and select `Custom repositories`.
@@ -30,6 +32,8 @@ Custom integration for Home Assistant that reads your Elisa Kotiakku data from:
 7. Go to `Settings -> Devices & Services -> Add Integration`.
 8. Search for `Elisa Kotiakku` and open it.
 9. Enter your API key.
+
+![Elisa Kotiakku Integration Setup](media/Screenshot_Kotiakku.jpg)
 
 ### HACS Requirements
 
@@ -61,7 +65,58 @@ The integration creates sensors for:
 - `spot_price_cents_per_kwh` (`c/kWh`)
 - `battery_temperature_celsius` (`°C`)
 
+## Dashboard YAML Example
+
+Inspired by the Home Assistant community solar dashboard style:
+
+- https://community.home-assistant.io/t/monitor-your-solar-pv-system-in-home-assistant/342710
+
+This repository includes a ready example view:
+
+- `examples/dashboard_elisa_kotiakku.yaml`
+
+<img src="media/example_dashboard.png" alt="Example dashboard preview" width="420" />
+
+Quick use:
+
+1. Open your dashboard in edit mode.
+2. Add a new view and switch to YAML mode.
+3. Paste the content from `examples/dashboard_elisa_kotiakku.yaml`.
+4. Adjust entity IDs if your names differ.
+
+Default entity IDs from this integration are name-based, for example:
+
+- `sensor.battery_power`
+- `sensor.solar_power`
+- `sensor.grid_power`
+- `sensor.house_power`
+- `sensor.battery_state_of_charge`
+- `sensor.spot_price`
+- `sensor.battery_temperature`
+
+Example snippet:
+
+```yaml
+title: Elisa Kotiakku
+path: elisa-kotiakku
+type: sections
+icon: mdi:home-battery
+sections:
+  - type: grid
+    cards:
+      - type: heading
+        heading: Live Power
+      - type: tile
+        entity: sensor.solar_power
+      - type: tile
+        entity: sensor.house_power
+      - type: tile
+        entity: sensor.grid_power
+      - type: tile
+        entity: sensor.battery_power
+```
+
 ## Notes
 
-- API data is polled every 5 minutes.
+- API data is polled every 30 seconds.
 - If the latest row has `null` values for a field, that sensor becomes temporarily unavailable.

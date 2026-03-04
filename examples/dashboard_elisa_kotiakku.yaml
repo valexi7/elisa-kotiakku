@@ -1,0 +1,92 @@
+  - type: sections
+    max_columns: 4
+    title: Elisa Kotiakku
+    path: kotiakku
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Live Power
+            heading_style: title
+          - type: tile
+            entity: sensor.solar_power
+            name: Solar
+          - type: tile
+            entity: sensor.house_power
+            name: House
+          - type: tile
+            entity: sensor.grid_power
+            name: Grid
+          - type: tile
+            entity: sensor.battery_power
+            name: Battery
+          - type: gauge
+            entity: sensor.battery_state_of_charge
+            name: Battery SoC
+            min: 0
+            max: 100
+            severity:
+              green: 60
+              yellow: 25
+              red: 0
+      - type: grid
+        cards:
+          - type: heading
+            heading: Energy Flow Details
+            heading_style: title
+          - type: entities
+            title: Solar Distribution
+            show_header_toggle: false
+            entities:
+              - entity: sensor.solar_to_house
+              - entity: sensor.solar_to_house
+                name: Solar to House
+              - entity: sensor.solar_to_battery
+                name: Solar to Battery
+              - entity: sensor.solar_to_grid
+                name: Solar to Grid
+          - type: entities
+            title: Grid and Battery Paths
+            show_header_toggle: false
+            entities:
+              - entity: sensor.grid_to_house
+                name: Grid to House
+              - entity: sensor.grid_to_battery
+                name: Grid to Battery
+              - entity: sensor.battery_to_house
+                name: Battery to House
+              - entity: sensor.battery_to_grid
+                name: Battery to Grid
+          - type: entities
+            title: Price and Temperature
+            show_header_toggle: false
+            entities:
+              - entity: sensor.spot_price
+                name: Spot Price
+              - entity: sensor.battery_temperature
+                name: Battery Temperature
+      - type: grid
+        cards:
+          - type: heading
+            heading: Trends (24h)
+            heading_style: title
+          - type: history-graph
+            title: Power Trend
+            hours_to_show: 24
+            entities:
+              - entity: sensor.solar_power
+                name: Solar
+              - entity: sensor.house_power
+                name: House
+              - entity: sensor.grid_power
+                name: Grid
+              - entity: sensor.battery_power
+                name: Battery
+          - type: history-graph
+            title: Price and Battery
+            hours_to_show: 24
+            entities:
+              - entity: sensor.spot_price
+                name: Spot Price
+              - entity: sensor.battery_state_of_charge
+                name: SoC
