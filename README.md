@@ -4,8 +4,8 @@
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate/?business=DS47TSR4VGKFL&no_recurring=0&item_name=Tech+is+a+playground+for+solving+real-world+problems+and+building+tools+that+make+life+easier+for+others.&currency_code=EUR)
 [![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/valexi)
 
-Custom integration for Home Assistant that reads your Elisa Kotiakku data from:
 <img src="media/example_dashboard.png" alt="Example dashboard preview" width="860" />
+Custom integration for Home Assistant that reads your Elisa Kotiakku data from:
 - `https://residential.gridle.com/api/public/measurements`
 - Authentication header: `x-api-key: <your_api_key>`
 
