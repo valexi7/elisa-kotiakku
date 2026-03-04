@@ -23,8 +23,6 @@ Custom integration for Home Assistant that reads your Elisa Kotiakku data from:
 
 ### Install with HACS
 
-<img src="media/HACS_custom_repository.png" alt="HACS Custom Repository" width="360" />
-
 1. Open HACS in Home Assistant.
 2. Go to `Integrations`.
 3. Open the menu (three dots) and select `Custom repositories`.
