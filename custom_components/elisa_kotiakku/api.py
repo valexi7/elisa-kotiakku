@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from asyncio import TimeoutError
+import json
 from typing import Any
 
 from aiohttp import ClientError, ClientSession
@@ -23,6 +24,10 @@ class ElisaKotiakkuApiAuthError(ElisaKotiakkuApiError):
 
 class ElisaKotiakkuApiConnectionError(ElisaKotiakkuApiError):
     """Network/connection error when reaching the API."""
+
+
+class ElisaKotiakkuApiRateLimitError(ElisaKotiakkuApiError):
+    """Rate limit exceeded error."""
 
 
 class ElisaKotiakkuApiClient:
@@ -59,17 +64,46 @@ class ElisaKotiakkuApiClient:
         async with response:
             if response.status in (401, 403):
                 raise ElisaKotiakkuApiAuthError("Invalid or unauthorized API key")
+            body = await response.text()
             if response.status == 429:
-                raise ElisaKotiakkuApiError("Rate limit exceeded")
+                api_message = _extract_api_message(body)
+                if api_message:
+                    raise ElisaKotiakkuApiRateLimitError(
+                        f"Rate limit exceeded: {api_message}"
+                    )
+                raise ElisaKotiakkuApiRateLimitError("Rate limit exceeded: no response message")
             if response.status >= 400:
-                body = await response.text()
+                api_message = _extract_api_message(body)
+                if not api_message:
+                    api_message = body.strip() or "no response message"
                 raise ElisaKotiakkuApiError(
-                    f"Elisa Kotiakku API request failed ({response.status}): {body}"
+                    f"Elisa Kotiakku API request failed ({response.status}): {api_message}"
                 )
 
-            payload = await response.json()
+            payload = json.loads(body)
 
         if not isinstance(payload, list):
             raise ElisaKotiakkuApiError("Unexpected API response format, expected array")
 
         return [item for item in payload if isinstance(item, dict)]
+
+
+def _extract_api_message(body: str) -> str | None:
+    """Extract a human-readable message from API response body."""
+    stripped = body.strip()
+    if not stripped:
+        return None
+
+    try:
+        parsed = json.loads(stripped)
+    except json.JSONDecodeError:
+        return stripped
+
+    if isinstance(parsed, dict):
+        for key in ("message", "error", "detail"):
+            value = parsed.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return stripped
+
+    return stripped
