@@ -10,4 +10,4 @@ MEASUREMENTS_PATH = "/api/public/measurements"
 
 CONF_API_KEY = "api_key"
 
-DEFAULT_SCAN_INTERVAL = timedelta(seconds=30)
+DEFAULT_SCAN_INTERVAL = timedelta(minutes=4)
