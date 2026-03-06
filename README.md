@@ -160,7 +160,7 @@ sections:
 
 ## Notes
 
-- API data is polled every 30 seconds.
+- API data is polled every 4 minutes.
 - If the latest row has `null` values for a field, that sensor becomes temporarily unavailable.
 - Energy sensors are accumulated from each API period (`period_start` -> `period_end`) and restored after restart.
 - If the API is reachable but latest measurement values are all `null`, a warning is logged that inverter connection may be lost.

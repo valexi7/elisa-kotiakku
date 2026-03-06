@@ -26,11 +26,15 @@ cards:
               production: sensor.grid_production
           home:
             entity: sensor.house_power
+          individual:
+            - entity: sensor.charger_power_active_import
+              secondary_info: {}
+              name: EV Charging
         clickable_entities: true
         w_decimals: 0
         kw_decimals: 2
-        min_flow_rate: 0.2
-        max_flow_rate: 10
+        min_flow_rate: 2
+        max_flow_rate: 5
         display_zero_lines: true
       - type: custom:mushroom-template-card
         entity: sensor.battery_state_of_charge
@@ -85,7 +89,7 @@ cards:
             name: Spot
             icon: mdi:currency-eur
   - type: custom:plotly-graph
-    title: Energy Consumption
+    title: Battery Usage
     hours_to_show: 6
     refresh_interval: 30
     defaults:
@@ -179,7 +183,7 @@ cards:
         zerolinewidth: 2
       legend:
         orientation: h
-        "y": -0.35
+        "y": -0.55
     entities:
       - entity: sensor.solar_to_house
         name: Solar → House
@@ -196,6 +200,412 @@ cards:
         type: bar
         marker:
           color: rgba(156,39,176,0.95)
+  - type: custom:plotly-graph
+    title: Battery Usage vs Spot Price
+    raw_plotly_config: true
+    hours_to_show: 48
+    refresh_interval: 30
+    defaults:
+      entity:
+        period: 5minute
+    config:
+      displayModeBar: false
+    entities:
+      - entity: sensor.spot_price
+        internal: true
+        fn: |
+          $ex {
+            try {
+              vars.charging_color = 'rgba(220, 70, 255, 0.95)';
+              vars.discharging_color = 'rgba(0, 200, 255, 0.95)';
+              
+              const SLOT_MS = 15 * 60 * 1000;
+              const SLOTS_PER_ROW = 24;
+              const ROWS = 8;
+              const TOTAL_SLOTS = SLOTS_PER_ROW * ROWS;
+
+              const toMs = (v) => {
+                const t = new Date(v).getTime();
+                return Number.isFinite(t) ? t : null;
+              };
+
+              const helsinki = (ts, opts = {}) =>
+                new Intl.DateTimeFormat(
+                  hass?.locale?.language || 'en-GB',
+                  {
+                    timeZone: 'Europe/Helsinki',
+                    hour12: false,
+                    ...opts
+                  }
+                ).format(new Date(ts));
+
+              const points = (xs || [])
+                .map((x, i) => [toMs(x), Number(ys?.[i])])
+                .filter(([t, v]) => Number.isFinite(t) && Number.isFinite(v))
+                .sort((a, b) => a[0] - b[0]);
+
+              if (!points.length) {
+                vars.hm = null;
+                return;
+              }
+
+              const nowMs = Date.now();
+              const endSlot = Math.floor(nowMs / (15 * 60 * 1000)) * (15 * 60 * 1000);
+              const startSlot = endSlot - (TOTAL_SLOTS - 1) * SLOT_MS;
+
+              const bands = [
+                { min: -Infinity, max: 0,  color: 'cyan',       label: '≤ 0 ¢' },
+                { min: 0,         max: 5,  color: 'lime',       label: '0–5 ¢' },
+                { min: 5,         max: 10, color: 'limegreen',  label: '5–10 ¢' },
+                { min: 10,        max: 15, color: 'gold',       label: '10–15 ¢' },
+                { min: 15,        max: 20, color: 'darkorange', label: '15–20 ¢' },
+                { min: 20,        max: 30, color: 'red',        label: '20–30 ¢' },
+                { min: 30,        max: Infinity, color: 'darkred', label: '> 30 ¢' }
+              ];
+
+              const bandIndexFor = (price) => {
+                if (!Number.isFinite(price)) return null;
+                for (let i = 0; i < bands.length; i++) {
+                  if (price > bands[i].min && price <= bands[i].max) return i;
+                  if (price === 0 && i === 0) return i;
+                }
+                return bands.length - 1;
+              };
+
+              const epsilon = 1 / (bands.length * 200);
+              const colorscale = [];
+              for (let i = 0; i < bands.length; i++) {
+                const s = i / bands.length;
+                const e = (i + 1) / bands.length;
+                colorscale.push([s, bands[i].color]);
+                colorscale.push([Math.max(s, e - epsilon), bands[i].color]);
+                if (i === bands.length - 1) colorscale.push([1, bands[i].color]);
+              }
+
+              const slotValues = new Array(TOTAL_SLOTS).fill(null);
+              let p = 0;
+              let last = null;
+              for (let i = 0; i < TOTAL_SLOTS; i++) {
+                const slotTime = startSlot + i * SLOT_MS;
+                while (p < points.length && points[p][0] <= slotTime) {
+                  last = points[p][1];
+                  p++;
+                }
+                slotValues[i] = Number.isFinite(last) ? last : null;
+              }
+
+              const x = Array.from({ length: SLOTS_PER_ROW }, (_, i) => i);
+              const y = [];
+              const yText = [];
+              const z = [];
+              const text = [];
+
+              for (let row = 0; row < ROWS; row++) {
+                const rowZ = [];
+                const rowText = [];
+                const rowStart = startSlot + row * SLOTS_PER_ROW * SLOT_MS;
+                const rowEnd = rowStart + SLOTS_PER_ROW * SLOT_MS;
+
+                y.push(row);
+                yText.push(
+                  `${helsinki(rowStart, { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} – ${helsinki(rowEnd, { hour: '2-digit', minute: '2-digit' })}`
+                );
+
+                for (let i = 0; i < SLOTS_PER_ROW; i++) {
+                  const idx = row * SLOTS_PER_ROW + i;
+                  const slotTime = startSlot + idx * SLOT_MS;
+                  const price = slotValues[idx];
+
+                  rowZ.push(bandIndexFor(price));
+                  rowText.push(
+                    Number.isFinite(price)
+                      ? `${helsinki(slotTime, { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}<br>${price.toFixed(3)} c/kWh`
+                      : `${helsinki(slotTime, { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}<br>No data`
+                  );
+                }
+
+                z.push(rowZ);
+                text.push(rowText);
+              }
+
+              vars.hm = {
+                x,
+                y,
+                z,
+                text,
+                yText,
+                colorscale,
+                bandTicks: bands.map((_, i) => i),
+                bandText: bands.map(b => b.label),
+                startSlot
+              };
+            } catch (err) {
+              console.error('[Spot heatmap] exception', err);
+              vars.hm = null;
+            }
+          }
+      - entity: sensor.battery_consumption
+        internal: true
+        fn: |
+          $ex {
+            try {
+              const SLOT_MS = 15 * 60 * 1000;
+              const SLOTS_PER_ROW = 24;
+              const ROWS = 8;
+              const TOTAL_SLOTS = SLOTS_PER_ROW * ROWS;
+              const startSlot = vars.hm?.startSlot;
+
+              if (!Number.isFinite(startSlot)) {
+                vars.charge = null;
+                return;
+              }
+
+              const toMs = (v) => {
+                const t = new Date(v).getTime();
+                return Number.isFinite(t) ? t : null;
+              };
+
+              const points = (xs || [])
+                .map((x, i) => [toMs(x), Number(ys?.[i])])
+                .filter(([t, v]) => Number.isFinite(t) && Number.isFinite(v))
+                .sort((a, b) => a[0] - b[0]);
+
+              const slotValues = new Array(TOTAL_SLOTS).fill(null);
+              let p = 0;
+              let last = null;
+              for (let i = 0; i < TOTAL_SLOTS; i++) {
+                const slotTime = startSlot + i * SLOT_MS;
+                while (p < points.length && points[p][0] <= slotTime) {
+                  last = points[p][1];
+                  p++;
+                }
+                slotValues[i] = Number.isFinite(last) ? last : null;
+              }
+
+              const z = [];
+              const threshold = 0.05;
+              for (let row = 0; row < ROWS; row++) {
+                const rowZ = [];
+                for (let i = 0; i < SLOTS_PER_ROW; i++) {
+                  const idx = row * SLOTS_PER_ROW + i;
+                  rowZ.push((slotValues[idx] || 0) > threshold ? 1 : null);
+                }
+                z.push(rowZ);
+              }
+
+              vars.charge = z;
+            } catch (err) {
+              console.error('[Charge mask] exception', err);
+              vars.charge = null;
+            }
+          }
+      - entity: sensor.battery_production
+        internal: true
+        fn: |
+          $ex {
+            try {
+              const SLOT_MS = 15 * 60 * 1000;
+              const SLOTS_PER_ROW = 24;
+              const ROWS = 8;
+              const TOTAL_SLOTS = SLOTS_PER_ROW * ROWS;
+              const startSlot = vars.hm?.startSlot;
+
+              if (!Number.isFinite(startSlot)) {
+                vars.discharge = null;
+                return;
+              }
+
+              const toMs = (v) => {
+                const t = new Date(v).getTime();
+                return Number.isFinite(t) ? t : null;
+              };
+
+              const points = (xs || [])
+                .map((x, i) => [toMs(x), Number(ys?.[i])])
+                .filter(([t, v]) => Number.isFinite(t) && Number.isFinite(v))
+                .sort((a, b) => a[0] - b[0]);
+
+              const slotValues = new Array(TOTAL_SLOTS).fill(null);
+              let p = 0;
+              let last = null;
+              for (let i = 0; i < TOTAL_SLOTS; i++) {
+                const slotTime = startSlot + i * SLOT_MS;
+                while (p < points.length && points[p][0] <= slotTime) {
+                  last = points[p][1];
+                  p++;
+                }
+                slotValues[i] = Number.isFinite(last) ? last : null;
+              }
+
+              const z = [];
+              const threshold = 0.05;
+              for (let row = 0; row < ROWS; row++) {
+                const rowZ = [];
+                for (let i = 0; i < SLOTS_PER_ROW; i++) {
+                  const idx = row * SLOTS_PER_ROW + i;
+                  rowZ.push((slotValues[idx] || 0) > threshold ? 1 : null);
+                }
+                z.push(rowZ);
+              }
+
+              vars.discharge = z;
+            } catch (err) {
+              console.error('[Discharge mask] exception', err);
+              vars.discharge = null;
+            }
+          }
+      - entity: sensor.spot_price
+        type: heatmap
+        showlegend: false
+        name: ""
+        x: $ex vars.hm?.x ?? [0]
+        "y": $ex vars.hm?.y ?? [0]
+        z: $ex vars.hm?.z ?? [[null]]
+        text: |-
+          $ex (() => {
+            const base = vars.hm?.text ?? [['']];
+            const charge = vars.charge ?? [];
+            const discharge = vars.discharge ?? [];
+
+            return base.map((row, r) =>
+              row.map((cell, c) => {
+                const tags = [];
+                if (charge?.[r]?.[c] === 1) tags.push('🟣 Charging');
+                if (discharge?.[r]?.[c] === 1) tags.push('🔵 Discharging');
+                return tags.length ? `${cell}<br><b>${tags.join('<br>')}</b>` : cell;
+              })
+            );
+          })()
+        hovertemplate: "%{text}<extra></extra>"
+        hoverongaps: false
+        showscale: true
+        colorscale: >-
+          $ex vars.hm?.colorscale ??
+          [[0,'rgba(31,35,40,0.12)'],[1,'rgba(31,35,40,0.12)']]
+        zmin: -0.5
+        zmax: 6.5
+        xgap: 2
+        ygap: 2
+        colorbar:
+          tickmode: array
+          tickvals: $ex vars.hm?.bandTicks ?? []
+          ticktext: $ex vars.hm?.bandText ?? []
+          thickness: 16
+          lenmode: fraction
+          len: 0.9
+          outlinewidth: 0
+          ticks: ""
+          tickfont:
+            size: 11
+      - entity: sensor.battery_consumption
+        type: heatmap
+        showlegend: false
+        name: ""
+        x: $ex vars.hm?.x ?? [0]
+        "y": $ex vars.hm?.y ?? [0]
+        z: $ex vars.charge ?? [[null]]
+        hoverinfo: skip
+        hoverongaps: false
+        showscale: false
+        opacity: 0.7
+        colorscale:
+          - - 0
+            - rgba(0,0,0,0)
+          - - 1
+            - $ex vars.charging_color
+        zmin: 0
+        zmax: 1
+        xgap: 2
+        ygap: 2
+      - entity: sensor.battery_production
+        type: heatmap
+        showlegend: false
+        name: ""
+        x: $ex vars.hm?.x ?? [0]
+        "y": $ex vars.hm?.y ?? [0]
+        z: $ex vars.discharge ?? [[null]]
+        hoverinfo: skip
+        hoverongaps: false
+        showscale: false
+        opacity: 0.7
+        colorscale:
+          - - 0
+            - rgba(0,0,0,0)
+          - - 1
+            - $ex vars.discharging_color
+        zmin: 0
+        zmax: 1
+        xgap: 2
+        ygap: 2
+    layout:
+      height: 460
+      margin:
+        t: 10
+        r: 10
+        b: 50
+        l: 115
+      dragmode: false
+      hovermode: closest
+      paper_bgcolor: $ex css_vars['card-background-color'] || '#ffffff'
+      plot_bgcolor: $ex css_vars['card-background-color'] || '#ffffff'
+      xaxis:
+        type: linear
+        showgrid: false
+        zeroline: false
+        ticks: ""
+        showline: false
+        showticklabels: false
+      yaxis:
+        type: linear
+        autorange: reversed
+        showgrid: false
+        zeroline: false
+        ticks: ""
+        showline: false
+        tickmode: array
+        tickvals: $ex vars.hm?.y ?? [0]
+        ticktext: $ex vars.hm?.yText ?? ["Last 48h"]
+        tickfont:
+          size: 11
+      annotations:
+        - xref: paper
+          yref: paper
+          x: 0.1
+          "y": -0.07
+          showarrow: false
+          text: ■
+          font:
+            size: 16
+            color: $ex vars.charging_color
+        - xref: paper
+          yref: paper
+          x: 0.16
+          "y": -0.07
+          showarrow: false
+          text: <b>Charging</b>
+          font:
+            size: 12
+            color: $ex vars.charging_color
+          align: left
+        - xref: paper
+          yref: paper
+          x: 0.45
+          "y": -0.07
+          showarrow: false
+          text: ■
+          font:
+            size: 16
+            color: $ex vars.discharging_color
+        - xref: paper
+          yref: paper
+          x: 0.82
+          "y": -0.07
+          showarrow: false
+          text: <b>Discharging</b>
+          font:
+            size: 12
+            color: $ex vars.discharging_color
+          align: left
   - type: grid
     columns: 2
     square: false
