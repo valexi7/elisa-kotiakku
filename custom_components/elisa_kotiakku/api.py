@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from asyncio import TimeoutError
 import json
+import logging
 from typing import Any
 
 from aiohttp import ClientError, ClientSession
@@ -12,6 +13,9 @@ from yarl import URL
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import API_BASE_URL, MEASUREMENTS_PATH
+
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class ElisaKotiakkuApiError(HomeAssistantError):
@@ -53,6 +57,15 @@ class ElisaKotiakkuApiClient:
             params["end_time"] = end_time
 
         headers = {"x-api-key": self._api_key}
+        if _LOGGER.isEnabledFor(logging.DEBUG):
+            _LOGGER.debug(
+                "Sending Elisa Kotiakku measurements request JSON: %s",
+                {
+                    "url": str(url),
+                    "params": params,
+                    "headers": {"x-api-key": _mask_secret(self._api_key)},
+                },
+            )
 
         try:
             response = await self._session.get(url, params=params, headers=headers, timeout=20)
@@ -65,6 +78,8 @@ class ElisaKotiakkuApiClient:
             if response.status in (401, 403):
                 raise ElisaKotiakkuApiAuthError("Invalid or unauthorized API key")
             body = await response.text()
+            if _LOGGER.isEnabledFor(logging.DEBUG):
+                _LOGGER.debug("Received Elisa Kotiakku measurements JSON: %s", body)
             if response.status == 429:
                 api_message = _extract_api_message(body)
                 if api_message:
@@ -107,3 +122,10 @@ def _extract_api_message(body: str) -> str | None:
         return stripped
 
     return stripped
+
+
+def _mask_secret(value: str) -> str:
+    """Mask sensitive strings for debug logging."""
+    if len(value) <= 6:
+        return "*" * len(value)
+    return f"{value[:3]}{'*' * (len(value) - 5)}{value[-2:]}"

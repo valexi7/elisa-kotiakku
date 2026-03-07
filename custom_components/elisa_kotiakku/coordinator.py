@@ -33,7 +33,6 @@ EXPECTED_MEASUREMENT_KEYS = {
     "grid_to_battery_kw",
     "battery_to_house_kw",
     "battery_to_grid_kw",
-    "spot_price_cents_per_kwh",
     "battery_temperature_celsius",
 }
 

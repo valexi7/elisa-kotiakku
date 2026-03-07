@@ -90,13 +90,15 @@ cards:
             icon: mdi:currency-eur
   - type: custom:plotly-graph
     title: Battery Usage
+    view_layout:
+      grid-column: span 2
     hours_to_show: 6
     refresh_interval: 30
     defaults:
       entity:
         period: 5minute
     layout:
-      height: 340
+      height: 420
       barmode: relative
       bargap: 0.15
       paper_bgcolor: rgba(0,0,0,0)
@@ -164,7 +166,7 @@ cards:
       entity:
         period: 5minute
     layout:
-      height: 300
+      height: 340
       barmode: relative
       bargap: 0.15
       paper_bgcolor: rgba(0,0,0,0)
@@ -200,6 +202,392 @@ cards:
         type: bar
         marker:
           color: rgba(156,39,176,0.95)
+  - type: custom:plotly-graph
+    title: Energy Split — Last 48h
+    raw_plotly_config: true
+    hours_to_show: 48
+    refresh_interval: 300
+    config:
+      displayModeBar: false
+    defaults:
+      entity:
+        period: 5minute
+    entities:
+      - entity: sensor.battery_to_house
+        internal: true
+        fn: |
+          $ex {
+            const integrateKwh = (xs, ys) => {
+              const hours = Number(meta?.hours_to_show ?? 48);
+              const end = Date.now();
+              const start = end - hours * 3600 * 1000;
+              const pts = (xs || [])
+                .map((x, i) => [new Date(x).getTime(), Number(ys?.[i])])
+                .filter(([t, v]) => Number.isFinite(t) && Number.isFinite(v))
+                .sort((a, b) => a[0] - b[0]);
+
+              if (!pts.length) return 0;
+
+              let total = 0;
+              let prevT = start;
+              let prevV = 0;
+
+              for (const [t, v] of pts) {
+                if (t < start) {
+                  prevT = start;
+                  prevV = v;
+                  continue;
+                }
+                const dtH = (Math.min(t, end) - prevT) / 3600000;
+                if (dtH > 0) total += prevV * dtH;
+                prevT = t;
+                prevV = v;
+                if (t > end) break;
+              }
+
+              if (prevT < end) {
+                total += prevV * ((end - prevT) / 3600000);
+              }
+              return Math.max(0, total);
+            };
+
+            vars.energy_split = vars.energy_split || {};
+            vars.energy_split.battery_to_house = integrateKwh(xs, ys);
+          }
+      - entity: sensor.battery_to_grid
+        internal: true
+        fn: |
+          $ex {
+            const integrateKwh = (xs, ys) => {
+              const hours = Number(meta?.hours_to_show ?? 48);
+              const end = Date.now();
+              const start = end - hours * 3600 * 1000;
+              const pts = (xs || [])
+                .map((x, i) => [new Date(x).getTime(), Number(ys?.[i])])
+                .filter(([t, v]) => Number.isFinite(t) && Number.isFinite(v))
+                .sort((a, b) => a[0] - b[0]);
+
+              if (!pts.length) return 0;
+
+              let total = 0, prevT = start, prevV = 0;
+              for (const [t, v] of pts) {
+                if (t < start) { prevT = start; prevV = v; continue; }
+                const dtH = (Math.min(t, end) - prevT) / 3600000;
+                if (dtH > 0) total += prevV * dtH;
+                prevT = t; prevV = v;
+                if (t > end) break;
+              }
+              if (prevT < end) total += prevV * ((end - prevT) / 3600000);
+              return Math.max(0, total);
+            };
+
+            vars.energy_split = vars.energy_split || {};
+            vars.energy_split.battery_to_grid = integrateKwh(xs, ys);
+          }
+      - entity: sensor.grid_to_battery
+        internal: true
+        fn: |
+          $ex {
+            const integrateKwh = (xs, ys) => {
+              const hours = Number(meta?.hours_to_show ?? 48);
+              const end = Date.now();
+              const start = end - hours * 3600 * 1000;
+              const pts = (xs || [])
+                .map((x, i) => [new Date(x).getTime(), Number(ys?.[i])])
+                .filter(([t, v]) => Number.isFinite(t) && Number.isFinite(v))
+                .sort((a, b) => a[0] - b[0]);
+
+              if (!pts.length) return 0;
+
+              let total = 0, prevT = start, prevV = 0;
+              for (const [t, v] of pts) {
+                if (t < start) { prevT = start; prevV = v; continue; }
+                const dtH = (Math.min(t, end) - prevT) / 3600000;
+                if (dtH > 0) total += prevV * dtH;
+                prevT = t; prevV = v;
+                if (t > end) break;
+              }
+              if (prevT < end) total += prevV * ((end - prevT) / 3600000);
+              return Math.max(0, total);
+            };
+
+            vars.energy_split = vars.energy_split || {};
+            vars.energy_split.grid_to_battery = integrateKwh(xs, ys);
+          }
+      - entity: sensor.solar_to_battery
+        internal: true
+        fn: |
+          $ex {
+            const integrateKwh = (xs, ys) => {
+              const hours = Number(meta?.hours_to_show ?? 48);
+              const end = Date.now();
+              const start = end - hours * 3600 * 1000;
+              const pts = (xs || [])
+                .map((x, i) => [new Date(x).getTime(), Number(ys?.[i])])
+                .filter(([t, v]) => Number.isFinite(t) && Number.isFinite(v))
+                .sort((a, b) => a[0] - b[0]);
+
+              if (!pts.length) return 0;
+
+              let total = 0, prevT = start, prevV = 0;
+              for (const [t, v] of pts) {
+                if (t < start) { prevT = start; prevV = v; continue; }
+                const dtH = (Math.min(t, end) - prevT) / 3600000;
+                if (dtH > 0) total += prevV * dtH;
+                prevT = t; prevV = v;
+                if (t > end) break;
+              }
+              if (prevT < end) total += prevV * ((end - prevT) / 3600000);
+              return Math.max(0, total);
+            };
+
+            vars.energy_split = vars.energy_split || {};
+            vars.energy_split.solar_to_battery = integrateKwh(xs, ys);
+          }
+      - entity: sensor.solar_to_house
+        internal: true
+        fn: |
+          $ex {
+            const integrateKwh = (xs, ys) => {
+              const hours = Number(meta?.hours_to_show ?? 48);
+              const end = Date.now();
+              const start = end - hours * 3600 * 1000;
+              const pts = (xs || [])
+                .map((x, i) => [new Date(x).getTime(), Number(ys?.[i])])
+                .filter(([t, v]) => Number.isFinite(t) && Number.isFinite(v))
+                .sort((a, b) => a[0] - b[0]);
+
+              if (!pts.length) return 0;
+
+              let total = 0, prevT = start, prevV = 0;
+              for (const [t, v] of pts) {
+                if (t < start) { prevT = start; prevV = v; continue; }
+                const dtH = (Math.min(t, end) - prevT) / 3600000;
+                if (dtH > 0) total += prevV * dtH;
+                prevT = t; prevV = v;
+                if (t > end) break;
+              }
+              if (prevT < end) total += prevV * ((end - prevT) / 3600000);
+              return Math.max(0, total);
+            };
+
+            vars.energy_split = vars.energy_split || {};
+            vars.energy_split.solar_to_house = integrateKwh(xs, ys);
+          }
+      - entity: sensor.solar_to_grid
+        internal: true
+        fn: |
+          $ex {
+            const integrateKwh = (xs, ys) => {
+              const hours = Number(meta?.hours_to_show ?? 48);
+              const end = Date.now();
+              const start = end - hours * 3600 * 1000;
+              const pts = (xs || [])
+                .map((x, i) => [new Date(x).getTime(), Number(ys?.[i])])
+                .filter(([t, v]) => Number.isFinite(t) && Number.isFinite(v))
+                .sort((a, b) => a[0] - b[0]);
+
+              if (!pts.length) return 0;
+
+              let total = 0, prevT = start, prevV = 0;
+              for (const [t, v] of pts) {
+                if (t < start) { prevT = start; prevV = v; continue; }
+                const dtH = (Math.min(t, end) - prevT) / 3600000;
+                if (dtH > 0) total += prevV * dtH;
+                prevT = t; prevV = v;
+                if (t > end) break;
+              }
+              if (prevT < end) total += prevV * ((end - prevT) / 3600000);
+              return Math.max(0, total);
+            };
+
+            vars.energy_split = vars.energy_split || {};
+            vars.energy_split.solar_to_grid = integrateKwh(xs, ys);
+          }
+      - entity: sensor.grid_to_house
+        internal: true
+        fn: |
+          $ex {
+            const integrateKwh = (xs, ys) => {
+              const hours = Number(meta?.hours_to_show ?? 48);
+              const end = Date.now();
+              const start = end - hours * 3600 * 1000;
+              const pts = (xs || [])
+                .map((x, i) => [new Date(x).getTime(), Number(ys?.[i])])
+                .filter(([t, v]) => Number.isFinite(t) && Number.isFinite(v))
+                .sort((a, b) => a[0] - b[0]);
+
+              if (!pts.length) return 0;
+
+              let total = 0, prevT = start, prevV = 0;
+              for (const [t, v] of pts) {
+                if (t < start) { prevT = start; prevV = v; continue; }
+                const dtH = (Math.min(t, end) - prevT) / 3600000;
+                if (dtH > 0) total += prevV * dtH;
+                prevT = t; prevV = v;
+                if (t > end) break;
+              }
+              if (prevT < end) total += prevV * ((end - prevT) / 3600000);
+              return Math.max(0, total);
+            };
+
+            vars.energy_split = vars.energy_split || {};
+            vars.energy_split.grid_to_house = integrateKwh(xs, ys);
+          }
+      - entity: sensor.battery_to_house
+        type: pie
+        name: Battery Out
+        labels:
+          - Batt→House
+          - Batt→Grid
+        values: |-
+          $ex [
+            vars.energy_split?.battery_to_house ?? 0,
+            vars.energy_split?.battery_to_grid ?? 0
+          ]
+        hole: 0.58
+        sort: false
+        textinfo: percent
+        texttemplate: "%{percent}"
+        hovertemplate: "%{label}<br>%{value:.2f} kWh<extra></extra>"
+        marker:
+          colors:
+            - rgba(76,175,80,0.95)
+            - rgba(33,150,243,0.95)
+        domain:
+          x:
+            - 0
+            - 0.23
+          "y":
+            - 0.08
+            - 0.88
+      - entity: sensor.grid_to_battery
+        type: pie
+        name: Battery In
+        labels:
+          - Grid→Batt
+          - Solar→Batt
+        values: |-
+          $ex [
+            vars.energy_split?.grid_to_battery ?? 0,
+            vars.energy_split?.solar_to_battery ?? 0
+          ]
+        hole: 0.58
+        sort: false
+        textinfo: percent
+        texttemplate: "%{percent}"
+        hovertemplate: "%{label}<br>%{value:.2f} kWh<extra></extra>"
+        marker:
+          colors:
+            - rgba(255,152,0,0.95)
+            - rgba(253,216,53,0.95)
+        domain:
+          x:
+            - 0.26
+            - 0.49
+          "y":
+            - 0.08
+            - 0.88
+      - entity: sensor.solar_to_house
+        type: pie
+        name: Solar
+        labels:
+          - Solar→House
+          - Solar→Batt
+          - Solar→Grid
+        values: |-
+          $ex [
+            vars.energy_split?.solar_to_house ?? 0,
+            vars.energy_split?.solar_to_battery ?? 0,
+            vars.energy_split?.solar_to_grid ?? 0
+          ]
+        hole: 0.58
+        sort: false
+        textinfo: percent
+        texttemplate: "%{percent}"
+        hovertemplate: "%{label}<br>%{value:.2f} kWh<extra></extra>"
+        marker:
+          colors:
+            - rgba(255,193,7,0.95)
+            - rgba(0,188,212,0.95)
+            - rgba(156,39,176,0.95)
+        domain:
+          x:
+            - 0.52
+            - 0.75
+          "y":
+            - 0.08
+            - 0.88
+      - entity: sensor.grid_to_house
+        type: pie
+        name: Grid
+        labels:
+          - Grid→House
+          - Grid→Batt
+        values: |-
+          $ex [
+            vars.energy_split?.grid_to_house ?? 0,
+            vars.energy_split?.grid_to_battery ?? 0
+          ]
+        hole: 0.58
+        sort: false
+        textinfo: percent
+        texttemplate: "%{percent}"
+        hovertemplate: "%{label}<br>%{value:.2f} kWh<extra></extra>"
+        marker:
+          colors:
+            - rgba(244,67,54,0.95)
+            - rgba(255,152,0,0.95)
+        domain:
+          x:
+            - 0.78
+            - 1
+          "y":
+            - 0.08
+            - 0.88
+    layout:
+      height: 280
+      margin:
+        t: 10
+        r: 10
+        b: 10
+        l: 10
+      showlegend: false
+      paper_bgcolor: $ex css_vars['card-background-color'] || '#111111'
+      plot_bgcolor: $ex css_vars['card-background-color'] || '#111111'
+      annotations:
+        - x: 0.02
+          "y": 0.97
+          xref: paper
+          yref: paper
+          text: <b>Battery Out</b>
+          showarrow: false
+          font:
+            size: 12
+        - x: 0.36
+          "y": 0.97
+          xref: paper
+          yref: paper
+          text: <b>Battery In</b>
+          showarrow: false
+          font:
+            size: 12
+        - x: 0.62
+          "y": 0.97
+          xref: paper
+          yref: paper
+          text: <b>Solar</b>
+          showarrow: false
+          font:
+            size: 12
+        - x: 0.92
+          "y": 0.97
+          xref: paper
+          yref: paper
+          text: <b>Grid</b>
+          showarrow: false
+          font:
+            size: 12
   - type: custom:plotly-graph
     title: Battery Usage vs Spot Price
     raw_plotly_config: true
