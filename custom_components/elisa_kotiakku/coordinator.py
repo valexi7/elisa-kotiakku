@@ -24,6 +24,8 @@ EXPECTED_MEASUREMENT_KEYS = {
     "battery_power_kw",
     "state_of_charge_percent",
     "solar_power_kw",
+    "solar_array_1_power_kw",
+    "solar_array_2_power_kw",
     "grid_power_kw",
     "house_power_kw",
     "solar_to_house_kw",

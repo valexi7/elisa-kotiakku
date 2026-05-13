@@ -53,6 +53,8 @@ The integration creates sensors for:
 - `battery_power_kw` (`kW`)
 - `state_of_charge_percent` (`%`)
 - `solar_power_kw` (`kW`)
+- `solar_array_1_power_kw` (`kW`)
+- `solar_array_2_power_kw` (`kW`)
 - `grid_power_kw` (`kW`)
 - `house_power_kw` (`kW`)
 - `solar_to_house_kw` (`kW`)
@@ -130,6 +132,8 @@ Default entity IDs from this integration are name-based, for example:
 
 - `sensor.battery_power`
 - `sensor.solar_power`
+- `sensor.solar_array_1_power`
+- `sensor.solar_array_2_power`
 - `sensor.grid_power`
 - `sensor.house_power`
 - `sensor.battery_state_of_charge`
